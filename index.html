@@ -44,14 +44,144 @@ h1 { margin: 0 0 4px 0; font-size: 1.3em; color: #e94560; display: inline-block;
 .player-item .chips { color: #ffd54f; }
 .player-item .debt { color: #f44336; font-size: 0.85em; }
 
-/* ===== ポーカーテーブル ===== */
+/* ===== ポーカーテーブル（半円） ===== */
 .poker-table {
-  background: #1b5e20; border-radius: 40px; padding: 16px;
-  border: 3px solid #2e7d32; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
-  text-align: center; margin-top: 8px;
+  background: radial-gradient(ellipse at 50% 100%, #1b5e20 0%, #0d3b0f 65%, #082008 100%);
+  border-radius: 300px 300px 40px 40px; padding: 14px 20px 18px;
+  border: 3px solid #2e7d32;
+  box-shadow: inset 0 0 60px rgba(0,0,0,0.5), 0 4px 20px rgba(0,0,0,0.3);
+  text-align: center; margin-top: 8px; position: relative;
 }
-.poker-table .phase-label { color: #aaa; font-size: 0.85em; margin: 4px 0; }
-.poker-table .pot-display { font-size: 1.2em; color: #ffd54f; font-weight: bold; margin: 6px 0; }
+.poker-table::before {
+  content: ''; position: absolute; top: 6px; left: 6px; right: 6px; bottom: 6px;
+  border-radius: 294px 294px 34px 34px;
+  border: 1px solid rgba(255,255,255,0.04); pointer-events: none;
+}
+.poker-table .phase-label { color: #aaa; font-size: 0.8em; margin: 2px 0 6px 0; }
+.poker-table .pot-display { font-size: 1.1em; color: #ffd54f; font-weight: bold; margin: 4px 0; }
+
+/* 対戦エリア（上部弧） */
+.opponents-area {
+  display: flex; justify-content: center; align-items: flex-start;
+  gap: 10px; flex-wrap: wrap; min-height: 72px;
+  padding: 4px 10px;
+}
+
+.opponent-seat {
+  background: rgba(0,0,0,0.25); border-radius: 10px 10px 6px 6px;
+  padding: 6px 10px 4px; text-align: center;
+  border: 1px solid rgba(255,255,255,0.06); min-width: 90px;
+  transition: all 0.2s ease; position: relative;
+}
+.opponent-seat .seat-name { color: #ccc; font-size: 0.75em; margin-bottom: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; }
+.opponent-seat .seat-info { color: #999; font-size: 0.7em; }
+.opponent-seat .seat-chips { color: #ffd54f; font-size: 0.7em; }
+.opponent-seat .seat-bet { color: #4fc3f7; font-size: 0.7em; }
+.opponent-seat .seat-cards { display: flex; justify-content: center; gap: 3px; margin: 3px 0; min-height: 34px; }
+.opponent-seat .seat-cards .card { width: 26px; height: 36px; font-size: 0.6em; }
+.opponent-seat .seat-cards .card .r { font-size: 0.8em; }
+.opponent-seat .seat-cards .card .s { font-size: 0.9em; }
+.opponent-seat .seat-cards .card.back { font-size: 0.9em; line-height: 36px; }
+.opponent-seat .seat-badge { position: absolute; top: -6px; right: -4px; }
+.opponent-seat.active-turn { background: rgba(233,69,96,0.15); border-color: rgba(233,69,96,0.3); }
+.opponent-seat.active-turn::after {
+  content: 'TURN'; position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  background: #e94560; color: #fff; font-size: 0.6em; font-weight: bold;
+  padding: 1px 6px; border-radius: 4px; animation: pulseGlow 1.5s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+/* テーブル中央 */
+.table-center { padding: 4px 0; }
+.table-center .card-row { min-height: 56px; }
+
+/* テーブル区切り */
+.table-divider {
+  height: 2px; background: linear-gradient(to right, transparent, rgba(255,255,255,0.08), transparent);
+  margin: 8px 0;
+}
+
+/* 下部エリア */
+.bottom-area { padding-top: 4px; }
+
+/* 横方向レイアウト（自分のカード＋アクション） */
+.my-row {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  flex-wrap: wrap;
+}
+.my-row .my-area { margin: 0; }
+.my-row .my-area .card-row { min-height: 50px; }
+.my-row .my-area .card { width: 38px; height: 52px; font-size: 0.8em; }
+.my-row .right-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+
+/* ===== チップ ===== */
+.chip {
+  width: 28px; height: 28px; border-radius: 50%; display: inline-block;
+  position: relative; box-shadow: 0 1px 4px rgba(0,0,0,0.4);
+  border: 2px solid rgba(0,0,0,0.15);
+  flex-shrink: 0;
+}
+.chip::after {
+  content: ''; position: absolute; top: 4px; left: 4px; right: 4px; bottom: 4px;
+  border-radius: 50%; border: 1.5px dashed rgba(255,255,255,0.35);
+}
+.chip-sm { width: 20px; height: 20px; }
+.chip-sm::after { top: 2px; left: 2px; right: 2px; bottom: 2px; border-width: 1px; }
+.chip-1 { background: radial-gradient(circle at 35% 35%, #fff, #ccc); }
+.chip-5 { background: radial-gradient(circle at 35% 35%, #ef5350, #b71c1c); }
+.chip-10 { background: radial-gradient(circle at 35% 35%, #42a5f5, #0d47a1); }
+.chip-25 { background: radial-gradient(circle at 35% 35%, #66bb6a, #1b5e20); }
+.chip-100 { background: radial-gradient(circle at 35% 35%, #ffd54f, #f57f17); }
+
+.chip-stack { display: inline-flex; align-items: center; margin: 0 2px; }
+.chip-stack .chip { margin-left: -10px; }
+.chip-stack .chip:first-child { margin-left: 0; }
+.chip-stack .chip-sm { margin-left: -6px; }
+
+/* チップ出現アニメーション */
+@keyframes chipDrop {
+  0% { transform: translateY(-30px) scale(0.5); opacity: 0; }
+  60% { transform: translateY(4px) scale(1.1); }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes chipSlide {
+  0% { transform: translateX(-60px) rotate(-20deg); opacity: 0; }
+  100% { transform: translateX(0) rotate(0); opacity: 1; }
+}
+.chip-drop { animation: chipDrop 0.35s ease forwards; }
+.chip-slide { animation: chipSlide 0.4s ease forwards; }
+
+/* ポットエリア（チップ山） */
+.pot-area {
+  margin: 8px auto; text-align: center; position: relative;
+}
+.pot-area .pot-label { font-size: 0.75em; color: #aaa; letter-spacing: 1px; }
+.pot-area .pot-value { font-size: 1.3em; color: #ffd54f; font-weight: bold; }
+.pot-chips {
+  display: flex; justify-content: center; align-items: flex-end;
+  min-height: 40px; flex-wrap: wrap; gap: 2px; margin: 4px 0;
+  padding: 4px; border-radius: 8px;
+  background: rgba(0,0,0,0.15);
+}
+.pot-chips .chip { margin: 1px; animation: chipDrop 0.3s ease forwards; }
+.pot-chips .chip:nth-child(1) { animation-delay: 0s; }
+.pot-chips .chip:nth-child(2) { animation-delay: 0.05s; }
+.pot-chips .chip:nth-child(3) { animation-delay: 0.1s; }
+.pot-chips .chip:nth-child(4) { animation-delay: 0.15s; }
+.pot-chips .chip:nth-child(5) { animation-delay: 0.2s; }
+.pot-chips .chip:nth-child(6) { animation-delay: 0.25s; }
+.pot-chips .chip:nth-child(7) { animation-delay: 0.3s; }
+.pot-chips .chip:nth-child(8) { animation-delay: 0.35s; }
+
+/* 勝利時のチップ演出 */
+@keyframes chipWin {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.2) translateY(-8px); }
+  100% { transform: scale(1) translateY(0); }
+}
+.chip-win { animation: chipWin 0.6s ease 3; }
+
+.chip-more { font-size: 0.75em; color: #ffd54f; font-weight: bold; margin-left: 2px; }
 
 /* カード */
 .card-row { display: flex; justify-content: center; gap: 5px; margin: 4px 0; min-height: 64px; }
@@ -67,15 +197,10 @@ h1 { margin: 0 0 4px 0; font-size: 1.3em; color: #e94560; display: inline-block;
 .card.back { background: #1565c0; color: #fff; font-size: 1.2em; }
 .card.empty { background: rgba(255,255,255,0.08); color: #777; border: 1px dashed #444; }
 
-/* 他プレイヤー行 */
-.other-player { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.85em; margin: 3px 0; }
-.other-player .pid { color: #aaa; min-width: 80px; text-align: right; }
-.other-player .info { color: #ccc; }
-.other-player .badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 0.8em; margin-left: 4px; }
+/* バッジ */
 .badge-d { background: #e94560; color: #fff; }
 .badge-sb { background: #f57c00; color: #fff; }
 .badge-bb { background: #1976d2; color: #fff; }
-.badge-fold { background: #555; color: #aaa; }
 .badge-allin { background: #d32f2f; color: #fff; }
 
 /* 自分のカード */
@@ -147,7 +272,8 @@ h1 { margin: 0 0 4px 0; font-size: 1.3em; color: #e94560; display: inline-block;
   transition: opacity 0.6s ease, transform 0.6s ease;
   pointer-events: none;
 }
-#standbyOverlay.hidden { opacity: 0; transform: scale(1.1); pointer-events: none; }
+#standbyOverlay.hidden { opacity: 0; transform: scale(1.1); pointer-events: none; transition: opacity 0.4s ease, transform 0.4s ease; }
+#standbyOverlay.hidden-final { display: none; }
 .standby-inner {
   text-align: center; padding: 40px; max-width: 440px; width: 90%;
   background: rgba(22,33,62,0.85); border-radius: 24px;
@@ -261,17 +387,7 @@ h1 { margin: 0 0 4px 0; font-size: 1.3em; color: #e94560; display: inline-block;
   background: rgba(255,213,79,0.1); border: 1px solid rgba(255,213,79,0.2);
 }
 
-/* ===== ターン表示 ===== */
-.turn-indicator {
-  display: inline-block; padding: 2px 10px; border-radius: 4px;
-  font-size: 0.75em; font-weight: bold; color: #fff;
-  background: #e94560; animation: pulseGlow 1.5s ease-in-out infinite;
-  margin-left: 6px;
-}
-.other-player.active-turn {
-  background: rgba(233,69,96,0.12); border-radius: 6px; padding: 4px 8px;
-  animation: pulseGlow 2s ease-in-out infinite;
-}
+/* ===== ターン表示（opponent-seat 側で定義） ===== */
 
 /* ===== アクションフラッシュ ===== */
 .action-flash {
@@ -308,17 +424,61 @@ h1 { margin: 0 0 4px 0; font-size: 1.3em; color: #e94560; display: inline-block;
 .actions button { transition: transform 0.15s ease, box-shadow 0.15s ease; }
 
 /* ===== 全体トランジション ===== */
-.poker-table { transition: opacity 0.5s ease, transform 0.5s ease; }
+.poker-table { transition: opacity 0.5s ease, transform 0.5s ease; position: relative; z-index: 50; }
 .poker-table.show { animation: fadeIn 0.5s ease; }
 
 /* ===== スピナー ===== */
 .spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.1); border-top-color: #e94560; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 8px; }
 
+/* ===== 役の早見表 ===== */
+.hand-chart-wrap { margin-top: 8px; }
+.hand-chart-toggle {
+  display: block; width: 100%; padding: 5px; border: 1px solid #0f3460; border-radius: 4px;
+  background: #16213e; color: #888; cursor: pointer; font-size: 0.78em; text-align: center;
+  transition: background 0.2s, color 0.2s;
+}
+.hand-chart-toggle:hover { background: #1a4a6a; color: #fff; }
+.hand-chart {
+  display: none; margin-top: 4px; padding: 6px 8px;
+  background: rgba(0,0,0,0.2); border-radius: 6px;
+}
+.hc-list { display: flex; flex-direction: column; gap: 3px; }
+.hc-item {
+  background: rgba(255,255,255,0.03); border-radius: 4px;
+  padding: 4px 8px; transition: background 0.15s;
+}
+.hc-item:hover { background: rgba(255,255,255,0.07); }
+.hc-item-row { display: flex; align-items: center; gap: 8px; }
+.hc-rank {
+  width: 18px; height: 18px; border-radius: 50%; background: rgba(255,255,255,0.08);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.6em; color: #888; font-weight: bold; flex-shrink: 0;
+}
+.hc-name { font-size: 0.78em; font-weight: bold; min-width: 100px; }
+.hc-cards { display: flex; gap: 2px; margin-left: auto; }
+.hc-mini-card {
+  display: inline-block; width: 20px; height: 26px; border-radius: 2px;
+  background: #fff; color: #222; font-size: 0.5em; text-align: center;
+  line-height: 26px; font-weight: bold; box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+.hc-mini-card.hc-red { color: #d32f2f; }
+.hc-desc { font-size: 0.6em; color: #777; margin-top: 1px; padding-left: 26px; }
+
 /* ===== レスポンシブ ===== */
 @media (max-width: 500px) {
   .card { width: 36px; height: 52px; font-size: 0.75em; }
-  .poker-table { padding: 10px; border-radius: 24px; }
+  .poker-table { padding: 10px 12px 14px; border-radius: 200px 200px 24px 24px; }
+  .poker-table::before { border-radius: 194px 194px 18px 18px; }
   body { padding: 8px; }
+  .opponent-seat { min-width: 70px; padding: 4px 6px; }
+  .opponent-seat .seat-cards .card { width: 22px; height: 30px; font-size: 0.5em; }
+  .opponent-seat .seat-cards .card.back { line-height: 30px; }
+  .my-row { flex-direction: column; gap: 8px; }
+  .my-row .my-area .card { width: 32px; height: 44px; }
+  .my-row .right-col .actions button { padding: 5px 10px; font-size: 0.8em; min-width: 48px; }
+  .pot-chips { min-height: 30px; }
+  .pot-chips .chip { width: 22px; height: 22px; }
+  .pot-chips .chip::after { top: 3px; left: 3px; right: 3px; bottom: 3px; }
 }
 </style>
 </head>
@@ -376,55 +536,67 @@ h1 { margin: 0 0 4px 0; font-size: 1.3em; color: #e94560; display: inline-block;
 <!-- 参加者一覧 -->
 <div id="playerList" style="display:none"></div>
 
-<!-- ===== ポーカーテーブル ===== -->
+<!-- ===== ポーカーテーブル（半円） ===== -->
 <div class="poker-table" id="pokerTable" style="display:none">
 
   <div class="phase-label" id="phaseDisplay">-</div>
 
-  <!-- コミュニティカード -->
-  <div class="card-row" id="communityRow">
-    <div class="card empty">-</div>
-    <div class="card empty">-</div>
-    <div class="card empty">-</div>
-    <div class="card empty">-</div>
-    <div class="card empty">-</div>
-  </div>
+  <!-- 他プレイヤー（上部弧に配置） -->
+  <div class="opponents-area" id="otherPlayersArea"></div>
 
-  <div class="pot-display">Pot: <span id="potDisplay">0</span></div>
-
-  <!-- 他プレイヤーの情報 -->
-  <div id="otherPlayersArea"></div>
-
-  <hr style="border-color:#2e7d32; margin:8px 0;">
-
-  <!-- 自分のカード -->
-  <div class="my-area">
-    <div class="my-label" id="myLabel">自分: <span class="chips" id="myChips">60</span></div>
-    <div class="card-row" id="myCards">
+  <!-- テーブル中央 -->
+  <div class="table-center">
+    <!-- コミュニティカード -->
+    <div class="card-row" id="communityRow">
+      <div class="card empty">-</div>
+      <div class="card empty">-</div>
+      <div class="card empty">-</div>
       <div class="card empty">-</div>
       <div class="card empty">-</div>
     </div>
+
+    <div class="pot-area">
+      <div class="pot-chips" id="potChips"></div>
+      <div class="pot-display"><span class="pot-label">POT</span> <span class="pot-value" id="potDisplay">0</span></div>
+    </div>
   </div>
 
-  <!-- アクション -->
-  <div class="actions" id="actionArea">
-    <button class="btn-fold"  id="btnFold"  onclick="doAction('fold')" disabled>Fold</button>
-    <button class="btn-check" id="btnCheck" onclick="doAction('check')" disabled>Check</button>
-    <button class="btn-call"  id="btnCall"  onclick="doAction('call')" disabled>Call</button>
-    <button class="btn-raise" id="btnRaise" onclick="showRaise('raise')" disabled>Raise</button>
-  </div>
+  <div class="table-divider"></div>
 
-  <div class="raise-control" id="raiseControl">
-    <input type="range" id="raiseRange" min="10" max="200" value="10" oninput="updateRaiseDisplay()">
-    <span class="raise-val" id="raiseDisplay">10</span>
-    <button class="btn-confirm" onclick="confirmRaise()">決定</button>
-    <button class="btn-cancel" onclick="hideRaise()">戻る</button>
-  </div>
+  <!-- 下部エリア -->
+  <div class="bottom-area">
+    <div class="my-row">
+      <div class="my-area">
+        <div class="my-label" id="myLabel"><span class="chip chip-1 chip-sm" style="vertical-align:middle;margin-right:4px"></span>自分: <span class="chips" id="myChips">60</span></div>
+        <div class="card-row" id="myCards">
+          <div class="card empty">-</div>
+          <div class="card empty">-</div>
+        </div>
+      </div>
 
-  <div class="hand-result" id="handResult" style="display:none"></div>
+      <div class="right-col">
+        <!-- アクション -->
+        <div class="actions" id="actionArea">
+          <button class="btn-fold"  id="btnFold"  onclick="doAction('fold')" disabled>Fold</button>
+          <button class="btn-check" id="btnCheck" onclick="doAction('check')" disabled>Check</button>
+          <button class="btn-call"  id="btnCall"  onclick="doAction('call')" disabled>Call</button>
+          <button class="btn-raise" id="btnRaise" onclick="showRaise('raise')" disabled>Raise</button>
+        </div>
 
-  <div class="game-btn" id="nextHandArea" style="display:none">
-    <button id="nextHandBtn" onclick="nextHand()">次のハンド</button>
+        <div class="raise-control" id="raiseControl">
+          <input type="range" id="raiseRange" min="10" max="200" value="10" oninput="updateRaiseDisplay()">
+          <span class="raise-val" id="raiseDisplay">10</span>
+          <button class="btn-confirm" onclick="confirmRaise()">決定</button>
+          <button class="btn-cancel" onclick="hideRaise()">戻る</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hand-result" id="handResult" style="display:none"></div>
+
+    <div class="game-btn" id="nextHandArea" style="display:none">
+      <button id="nextHandBtn" onclick="nextHand()">次のハンド</button>
+    </div>
   </div>
 </div>
 
@@ -494,6 +666,75 @@ function renderCards(container, cards, faceUp, count, animate) {
 
 function hc(arr) { return arr ? arr.map(c => Card.fromObj(c)) : []; }
 
+// ==================== チップ描画 ====================
+const CHIP_DENOMS = [25, 10, 5, 1];
+function chipBreakdown(amount) {
+  const counts = {};
+  let rest = Math.max(0, amount);
+  for (const d of CHIP_DENOMS) {
+    counts[d] = Math.floor(rest / d);
+    rest %= d;
+  }
+  return counts;
+}
+
+function createChipEl(denom, small) {
+  const el = document.createElement('div');
+  el.className = 'chip chip-' + denom + (small ? ' chip-sm' : '');
+  return el;
+}
+
+function renderChips(container, amount, maxChips, animate) {
+  if (!container) return;
+  container.innerHTML = '';
+  const breakdown = chipBreakdown(amount);
+  let total = 0;
+  const chips = [];
+  for (const d of CHIP_DENOMS) {
+    const n = breakdown[d] || 0;
+    for (let i = 0; i < n && total < (maxChips || 20); i++) {
+      const el = createChipEl(d);
+      if (animate) el.classList.add('chip-drop');
+      chips.push(el);
+      total++;
+    }
+    if (total >= (maxChips || 20)) break;
+  }
+  // 上限以上は "+N" 表示
+  if (amount > 0 && chips.length === 0) {
+    const el = createChipEl(1);
+    chips.push(el);
+  }
+  chips.forEach(c => container.appendChild(c));
+  if (total >= (maxChips || 20) && amount > 0) {
+    const more = document.createElement('span');
+    more.className = 'chip-more';
+    more.textContent = '+';
+    container.appendChild(more);
+  }
+}
+
+function renderPotChips(amount, animate) {
+  const container = document.getElementById('potChips');
+  renderChips(container, amount, 12, animate);
+}
+
+function renderBetChips(container, amount) {
+  if (!container) return;
+  container.innerHTML = '';
+  if (amount <= 0) return;
+  const breakdown = chipBreakdown(amount);
+  let count = 0;
+  for (const d of CHIP_DENOMS) {
+    const n = breakdown[d] || 0;
+    for (let i = 0; i < n && count < 5; i++) {
+      container.appendChild(createChipEl(d, true));
+      count++;
+    }
+    if (count >= 5) break;
+  }
+}
+
 // ==================== ポジションバッジ ====================
 function posBadge(pidx, dealer, sb, bb) {
   if (pidx === dealer) return '<span class="badge badge-d">D</span>';
@@ -515,8 +756,11 @@ function updatePokerUI() {
   // フェーズ表示
   phaseDisplay.innerHTML = '<span class="phase-badge ' + g.phase + (phaseChanged ? ' phase-change' : '') + '">' + phaseText + '</span>';
 
-  // ポット
-  potDisplay.innerHTML = '<span class="pot-glow' + (phaseChanged ? ' pot-change' : '') + '">Pot: ' + g.pot + '</span>';
+  // ポット（チップ表示）
+  const prevPot = potDisplay.textContent.replace(/[^0-9]/g, '') || '0';
+  const potChanged = parseInt(prevPot) !== g.pot;
+  potDisplay.textContent = g.pot;
+  renderPotChips(g.pot, potChanged);
 
   // コミュニティカード（アニメーション付き）
   const prevCommunityCount = communityRow.querySelectorAll('.card:not(.empty)').length;
@@ -562,7 +806,9 @@ function updatePokerUIFromState(data) {
 
   phaseDisplay.innerHTML = '<span class="phase-badge ' + data.phase + (phaseChanged ? ' phase-change' : '') + '">' + phaseText + '</span>';
 
-  potDisplay.innerHTML = '<span class="pot-glow' + (phaseChanged ? ' pot-change' : '') + '">Pot: ' + data.pot + '</span>';
+  const prevPot = potDisplay.textContent.replace(/[^0-9]/g, '') || '0';
+  potDisplay.textContent = data.pot;
+  renderPotChips(data.pot, parseInt(prevPot) !== data.pot);
 
   const prevCommunityCount = communityRow.querySelectorAll('.card:not(.empty)').length;
   const newCount = data.communityCards ? data.communityCards.length : 0;
@@ -599,34 +845,56 @@ let lastStateHoleKey = '';
 
 // ==================== 他プレイヤー表示 ====================
 
+function renderOpponentSeat(pname, p, seatIdx, isTurn, isDealer, isSB, isBB, showHole, holeCards) {
+  const seat = document.createElement('div');
+  seat.className = 'opponent-seat';
+  if (isTurn) seat.classList.add('active-turn');
+
+  let cardsHtml = '';
+  if (p.folded) {
+    cardsHtml = '<span style="color:#888;font-size:0.7em">フォールド</span>';
+  } else if (p.allIn) {
+    cardsHtml = '<span class="badge badge-allin" style="font-size:0.65em">ALL IN</span>';
+  } else if (showHole && holeCards && holeCards.length > 0) {
+    const ch = hc(holeCards);
+    cardsHtml = cardEl(ch[0], true).outerHTML + cardEl(ch[1], true).outerHTML;
+  } else {
+    const c1 = cardEl(null, false);
+    const c2 = cardEl(null, false);
+    cardsHtml = c1.outerHTML + c2.outerHTML;
+  }
+
+  let badges = '';
+  if (isDealer) badges += '<span class="badge badge-d" style="font-size:0.6em;padding:1px 4px">D</span> ';
+  if (isSB) badges += '<span class="badge badge-sb" style="font-size:0.6em;padding:1px 4px">SB</span> ';
+  if (isBB) badges += '<span class="badge badge-bb" style="font-size:0.6em;padding:1px 4px">BB</span> ';
+
+  seat.innerHTML =
+    '<div class="seat-name">' + pname.slice(0, 8) + badges + '</div>' +
+    '<div class="seat-cards">' + cardsHtml + '</div>' +
+    '<div class="seat-info">' +
+      '<span class="seat-chips">$' + p.chips + '</span>' +
+      (p.bet > 0 ? ' <span class="seat-bet">Bet:' + p.bet + '</span>' : '') +
+    '</div>' +
+    (p.debt > 0 ? '<div style="color:#f44336;font-size:0.65em">借金' + p.debt + '</div>' : '');
+
+  return seat;
+}
+
 function renderOtherPlayers(g) {
   otherPlayersArea.innerHTML = '';
   const blinds = g.getBlindPositions();
   for (let i = 1; i < g.players.length; i++) {
     const p = g.players[i];
-    const d = document.createElement('div'); d.className = 'other-player';
-    if (g.currentPlayer === i && !g.handOver) d.classList.add('active-turn');
+    const pname = window.getPlayerName ? window.getPlayerName(p.id) : p.id;
     const showCards = (g.phase === 'showdown' || p.folded) ? p.hole : null;
-    let cardsHtml = '';
-    let extra = '';
-    if (p.folded) {
-      cardsHtml = '<span style="color:#888">フォールド</span>';
-    } else if (p.allIn) {
-      cardsHtml = '<span class="badge badge-allin">ALL IN</span>';
-    } else {
-      const c1 = cardEl(showCards && showCards[0] ? showCards[0] : null, showCards && showCards.length > 0);
-      const c2 = cardEl(showCards && showCards[1] ? showCards[1] : null, showCards && showCards.length > 0);
-      cardsHtml = c1.outerHTML + c2.outerHTML;
-    }
-    if (g.currentPlayer === i && !g.handOver) {
-      extra = '<span class="turn-indicator">TURN</span>';
-    }
-    const pname = (window.getPlayerName ? window.getPlayerName(p.id) : p.id);
-    d.innerHTML = '<span class="pid">' + pname.slice(0, 10) + '</span> ' + cardsHtml +
-      ' <span class="info">Chip:' + p.chips + ' Bet:' + p.bet + '</span> ' +
-      posBadge(i, blinds.dealer, blinds.sb, blinds.bb) + extra +
-      (p.debt > 0 ? ' <span style="color:#f44336;font-size:0.8em">借金' + p.debt + '</span>' : '');
-    otherPlayersArea.appendChild(d);
+    const seat = renderOpponentSeat(
+      pname, p, i,
+      g.currentPlayer === i && !g.handOver,
+      i === blinds.dealer, i === blinds.sb, i === blinds.bb,
+      !!showCards, showCards
+    );
+    otherPlayersArea.appendChild(seat);
   }
 }
 
@@ -636,30 +904,17 @@ function renderOtherPlayersFromState(data) {
   for (let i = 0; i < data.players.length; i++) {
     if (i === meIdx) continue;
     const p = data.players[i];
-    const d = document.createElement('div'); d.className = 'other-player';
-    if (data.currentPlayer === i && !data.handOver) d.classList.add('active-turn');
-    let cardsHtml = '';
-    let extra = '';
-    if (p.folded) {
-      cardsHtml = '<span style="color:#888">フォールド</span>';
-    } else if (p.allIn) {
-      cardsHtml = '<span class="badge badge-allin">ALL IN</span>';
-    } else if (p.hole && data.phase === 'showdown') {
-      const ch = hc(p.hole);
-      cardsHtml = cardEl(ch[0], true).outerHTML + cardEl(ch[1], true).outerHTML;
-    } else {
-      const c1 = cardEl(null, false);
-      const c2 = cardEl(null, false);
-      cardsHtml = c1.outerHTML + c2.outerHTML;
-    }
-    if (data.currentPlayer === i && !data.handOver) {
-      extra = '<span class="turn-indicator">TURN</span>';
-    }
-    const pname = (window.getPlayerName ? window.getPlayerName(p.id) : p.id);
-    d.innerHTML = '<span class="pid">' + pname.slice(0, 10) + '</span> ' + cardsHtml +
-      ' <span class="info">Chip:' + p.chips + ' Bet:' + p.bet + '</span>' +
-      (data.blinds ? posBadge(i, data.blinds.dealer, data.blinds.sb, data.blinds.bb) : '') + extra;
-    otherPlayersArea.appendChild(d);
+    const pname = window.getPlayerName ? window.getPlayerName(p.id) : p.id;
+    const showCards = (data.phase === 'showdown' && p.hole && p.hole.length > 0) ? p.hole : null;
+    const seat = renderOpponentSeat(
+      pname, p, i,
+      data.currentPlayer === i && !data.handOver,
+      data.blinds && i === data.blinds.dealer,
+      data.blinds && i === data.blinds.sb,
+      data.blinds && i === data.blinds.bb,
+      !!showCards, showCards
+    );
+    otherPlayersArea.appendChild(seat);
   }
 }
 
@@ -770,6 +1025,7 @@ function showResult(winner) {
   } else if (isWin) {
     handResult.classList.add('win-result');
     html += '<div class="win">🎉 あなたの勝ち！</div><div class="detail">役: ' + winner.handName + '</div><div class="detail">獲得: ' + winner.pot + '</div>';
+    document.querySelectorAll('#potChips .chip').forEach(c => c.classList.add('chip-win'));
   } else {
     handResult.classList.add('lose-result');
     const wname = window.getPlayerName ? window.getPlayerName(winner.winner) : winner.winner.slice(0, 10);
@@ -791,6 +1047,7 @@ function showResultFromState(data) {
   } else if (isMe) {
     handResult.classList.add('win-result');
     html += '<div class="win">🎉 あなたの勝ち！</div><div class="detail">役: ' + data.winner.handName + '</div><div class="detail">獲得: ' + data.winner.pot + '</div>';
+    document.querySelectorAll('#potChips .chip').forEach(c => c.classList.add('chip-win'));
   } else {
     handResult.classList.add('lose-result');
     const wname = window.getPlayerName ? window.getPlayerName(data.winner.winner) : data.winner.winner.slice(0, 10);
@@ -807,7 +1064,10 @@ function startGame() {
   pokerTable.style.display = 'block';
   setTimeout(() => pokerTable.classList.add('show'), 10);
   startGameBtnArea.style.display = 'none';
-  document.getElementById('standbyOverlay').classList.add('hidden');
+  const overlay = document.getElementById('standbyOverlay');
+  overlay.classList.add('hidden');
+  document.getElementById('handChartWrap').style.display = '';
+  setTimeout(() => overlay.classList.add('hidden-final'), 500);
   broadcastToPlayers({ action: 'gameStart' });
   pokerGame.startHand();
   broadcastState();
@@ -893,7 +1153,10 @@ setOnPokerMessage((msg, senderId) => {
     pokerTable.style.display = 'block';
     setTimeout(() => pokerTable.classList.add('show'), 10);
     startGameBtnArea.style.display = 'none';
-    document.getElementById('standbyOverlay').classList.add('hidden');
+    const overlay = document.getElementById('standbyOverlay');
+    overlay.classList.add('hidden');
+    document.getElementById('handChartWrap').style.display = '';
+    setTimeout(() => overlay.classList.add('hidden-final'), 500);
     addLog('ゲームが開始されました', 'info');
     return;
   }
@@ -972,6 +1235,84 @@ window.showRaise = showRaise;
 window.hideRaise = hideRaise;
 window.updateRaiseDisplay = updateRaiseDisplay;
 window.confirmRaise = confirmRaise;
+</script>
+
+<!-- ===== 役の早見表 ===== -->
+<div class="hand-chart-wrap" id="handChartWrap" style="display:none">
+  <button class="hand-chart-toggle" id="handChartToggle" onclick="toggleHandChart()">📋 役の早見表</button>
+  <div class="hand-chart" id="handChart"></div>
+</div>
+
+<script>
+// ==================== 役の早見表 ====================
+const HAND_TABLE = [
+  { rank: 9, name: 'ロイヤルフラッシュ', desc: 'A K Q J 10 (全同じマーク)', color: '#ff1744', cards: [
+    { s:'♠',r:'A'},{s:'♠',r:'K'},{s:'♠',r:'Q'},{s:'♠',r:'J'},{s:'♠',r:'10'}
+  ]},
+  { rank: 8, name: 'ストレートフラッシュ', desc: '5連続 (全同じマーク)', color: '#ff6d00', cards: [
+    { s:'♥',r:'9'},{s:'♥',r:'8'},{s:'♥',r:'7'},{s:'♥',r:'6'},{s:'♥',r:'5'}
+  ]},
+  { rank: 7, name: 'フォーカード', desc: '同じ数字4枚', color: '#ff9100', cards: [
+    { s:'♠',r:'A'},{s:'♥',r:'A'},{s:'♦',r:'A'},{s:'♣',r:'A'},{s:'♠',r:'K'}
+  ]},
+  { rank: 6, name: 'フルハウス', desc: 'スリーカード＋ワンペア', color: '#ffd600', cards: [
+    { s:'♠',r:'K'},{s:'♥',r:'K'},{s:'♦',r:'K'},{s:'♠',r:'Q'},{s:'♥',r:'Q'}
+  ]},
+  { rank: 5, name: 'フラッシュ', desc: '5枚同じマーク', color: '#76ff03', cards: [
+    { s:'♣',r:'A'},{s:'♣',r:'Q'},{s:'♣',r:'9'},{s:'♣',r:'5'},{s:'♣',r:'3'}
+  ]},
+  { rank: 4, name: 'ストレート', desc: '5連続の数字', color: '#00e676', cards: [
+    { s:'♠',r:'10'},{s:'♥',r:'9'},{s:'♦',r:'8'},{s:'♣',r:'7'},{s:'♠',r:'6'}
+  ]},
+  { rank: 3, name: 'スリーカード', desc: '同じ数字3枚', color: '#18ffff', cards: [
+    { s:'♠',r:'7'},{s:'♥',r:'7'},{s:'♦',r:'7'},{s:'♣',r:'K'},{s:'♠',r:'2'}
+  ]},
+  { rank: 2, name: 'ツーペア', desc: '2つのペア', color: '#448aff', cards: [
+    { s:'♠',r:'J'},{s:'♥',r:'J'},{s:'♦',r:'5'},{s:'♣',r:'5'},{s:'♠',r:'3'}
+  ]},
+  { rank: 1, name: 'ワンペア', desc: '同じ数字2枚', color: '#d500f9', cards: [
+    { s:'♠',r:'A'},{s:'♥',r:'A'},{s:'♦',r:'K'},{s:'♣',r:'Q'},{s:'♠',r:'2'}
+  ]},
+  { rank: 0, name: 'ハイカード', desc: '一番強いカード', color: '#78909c', cards: [
+    { s:'♠',r:'A'},{s:'♥',r:'K'},{s:'♦',r:'Q'},{s:'♣',r:'J'},{s:'♠',r:'9'}
+  ]},
+];
+
+function handCardEl(suit, rank) {
+  const isRed = suit === '♥' || suit === '♦';
+  return '<span class="hc-mini-card' + (isRed ? ' hc-red' : '') + '">' + rank + suit + '</span>';
+}
+
+function buildHandChart() {
+  const chart = document.getElementById('handChart');
+  if (!chart) return;
+  
+  let html = '<div class="hc-list">';
+  for (const h of HAND_TABLE) {
+    const cardsHtml = h.cards.map(c => handCardEl(c.s, c.r)).join('');
+    html += '<div class="hc-item" style="border-left: 3px solid ' + h.color + '">' +
+      '<div class="hc-item-row">' +
+        '<span class="hc-rank">' + h.rank + '</span>' +
+        '<span class="hc-name" style="color:' + h.color + '">' + h.name + '</span>' +
+        '<span class="hc-cards">' + cardsHtml + '</span>' +
+      '</div>' +
+      '<div class="hc-desc">' + h.desc + '</div>' +
+    '</div>';
+  }
+  html += '</div>';
+  chart.innerHTML = html;
+}
+
+let handChartVisible = false;
+function toggleHandChart() {
+  handChartVisible = !handChartVisible;
+  const chart = document.getElementById('handChart');
+  const btn = document.getElementById('handChartToggle');
+  if (chart) chart.style.display = handChartVisible ? 'block' : 'none';
+  btn.textContent = handChartVisible ? '📋 役の早見表を隠す' : '📋 役の早見表';
+}
+
+buildHandChart();
 </script>
 
 </body>
