@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Peer Poker - テキサスホールデム</title>
+<style>
+* { box-sizing: border-box; }
+body {
+  font-family: 'Segoe UI', sans-serif; max-width: 780px; margin: 0 auto; padding: 16px;
+  background: #1a1a2e; color: #eee;
+}
+h1 { margin: 0 0 4px 0; font-size: 1.3em; color: #e94560; display: inline-block; }
+
+/* ===== ヘッダー ===== */
+.header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-bottom: 8px; }
+.myid { background: #16213e; padding: 4px 10px; border-radius: 4px; font-size: 0.85em; border: 1px solid #0f3460; }
+.myid span { color: #4fc3f7; font-weight: bold; }
+.roomid { background: #0f3460; padding: 4px 10px; border-radius: 4px; font-size: 0.85em; }
+.roomid span { color: #ffd54f; font-weight: bold; }
+
+/* ===== 接続 ===== */
+.conn-row { display: flex; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.conn-row input { flex: 1; min-width: 120px; padding: 7px 10px; border: 1px solid #0f3460; border-radius: 4px; background: #16213e; color: #eee; }
+.conn-row button { padding: 7px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.btn-primary { background: #e94560; color: #fff; }
+.btn-primary:hover { background: #c73652; }
+.btn-secondary { background: #0f3460; color: #fff; }
+.btn-secondary:hover { background: #1a4a8a; }
+.conn-row button:disabled { background: #555; cursor: default; }
+
+/* ===== ログ ===== */
+#logArea {
+  border: 1px solid #0f3460; border-radius: 4px; padding: 4px 8px; margin-bottom: 8px;
+  min-height: 28px; max-height: 52px; overflow-y: auto; background: #16213e; font-size: 0.82em; color: #aaa;
+}
+
+/* ===== ステータス ===== */
+#status { margin-bottom: 8px; font-size: 0.85em; color: #888; }
+
+/* ===== プレイヤー一覧 ===== */
+#playerList { margin-bottom: 8px; font-size: 0.9em; }
+.player-item { padding: 2px 6px; border-radius: 3px; margin: 2px 0; background: #16213e; }
+.player-item .chips { color: #ffd54f; }
+.player-item .debt { color: #f44336; font-size: 0.85em; }
+
+/* ===== ポーカーテーブル ===== */
+.poker-table {
+  background: #1b5e20; border-radius: 40px; padding: 16px;
+  border: 3px solid #2e7d32; box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+  text-align: center; margin-top: 8px;
+}
+.poker-table .phase-label { color: #aaa; font-size: 0.85em; margin: 4px 0; }
+.poker-table .pot-display { font-size: 1.2em; color: #ffd54f; font-weight: bold; margin: 6px 0; }
+
+/* カード */
+.card-row { display: flex; justify-content: center; gap: 5px; margin: 4px 0; min-height: 64px; }
+.card {
+  width: 44px; height: 62px; border-radius: 5px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; font-weight: bold; font-size: 0.9em;
+  background: #fff; box-shadow: 1px 1px 4px rgba(0,0,0,0.4); line-height: 1.2;
+}
+.card .r { font-size: 1em; }
+.card .s { font-size: 1.1em; }
+.card.red { color: #d32f2f; }
+.card.black { color: #222; }
+.card.back { background: #1565c0; color: #fff; font-size: 1.2em; }
+.card.empty { background: rgba(255,255,255,0.08); color: #777; border: 1px dashed #444; }
+
+/* 他プレイヤー行 */
+.other-player { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 0.85em; margin: 3px 0; }
+.other-player .pid { color: #aaa; min-width: 80px; text-align: right; }
+.other-player .info { color: #ccc; }
+.other-player .badge { display: inline-block; padding: 1px 5px; border-radius: 3px; font-size: 0.8em; margin-left: 4px; }
+.badge-d { background: #e94560; color: #fff; }
+.badge-sb { background: #f57c00; color: #fff; }
+.badge-bb { background: #1976d2; color: #fff; }
+.badge-fold { background: #555; color: #aaa; }
+.badge-allin { background: #d32f2f; color: #fff; }
+
+/* 自分のカード */
+.my-area { margin: 8px 0 4px 0; }
+.my-label { font-size: 0.85em; color: #ccc; }
+.my-label .chips { color: #ffd54f; }
+
+/* ===== アクション ===== */
+.actions { margin: 8px 0; display: flex; justify-content: center; gap: 6px; flex-wrap: wrap; }
+.actions button {
+  padding: 7px 16px; border: none; border-radius: 4px; cursor: pointer;
+  font-weight: bold; font-size: 0.9em; min-width: 58px;
+}
+.actions button:disabled { opacity: 0.3; cursor: default; }
+.btn-fold { background: #666; color: #fff; }
+.btn-check { background: #388e3c; color: #fff; }
+.btn-call { background: #1976d2; color: #fff; }
+.btn-bet  { background: #f57c00; color: #fff; }
+.btn-raise { background: #d32f2f; color: #fff; }
+
+.raise-control { display: none; margin: 6px 0; }
+.raise-control input[type=range] { width: 160px; vertical-align: middle; }
+.raise-val { font-weight: bold; color: #ffd54f; font-size: 1em; margin: 0 6px; }
+.raise-control button { padding: 5px 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.btn-confirm { background: #f57c00; color: #fff; }
+.btn-cancel { background: #555; color: #fff; }
+
+/* 結果 */
+.hand-result {
+  margin: 10px auto; padding: 10px; border-radius: 6px; max-width: 300px;
+  background: rgba(0,0,0,0.5); border: 2px solid #ffd54f;
+}
+.hand-result .win { color: #4caf50; font-size: 1.1em; font-weight: bold; }
+.hand-result .lose { color: #f44336; font-size: 1.1em; font-weight: bold; }
+.hand-result .draw { color: #ffd54f; font-size: 1.1em; font-weight: bold; }
+.hand-result .detail { color: #ccc; font-size: 0.85em; margin-top: 3px; }
+
+/* ゲームボタン */
+.game-btn { margin: 8px 0; }
+.game-btn button {
+  padding: 8px 24px; border: none; border-radius: 6px; cursor: pointer;
+  font-weight: bold; font-size: 0.95em; background: #e94560; color: #fff;
+}
+.game-btn button:hover { background: #c73652; }
+.game-btn button:disabled { background: #555; cursor: default; }
+
+/* ===== レスポンシブ ===== */
+@media (max-width: 500px) {
+  .card { width: 36px; height: 52px; font-size: 0.75em; }
+  .poker-table { padding: 10px; border-radius: 24px; }
+  body { padding: 8px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>♠ Peer Poker ♥</h1>
+  <div class="myid">ID: <span id="myId">---</span></div>
+</div>
+
+<div class="roomid">ルームID: <span id="roomId">---</span></div>
+
+<div class="conn-row">
+  <button class="btn-primary" id="createRoomBtn">ルーム作成</button>
+  <span style="color:#555">|</span>
+  <input type="text" id="joinInput" placeholder="入室するルームID">
+  <button class="btn-secondary" id="joinBtn">入室</button>
+</div>
+
+<div id="status">準備中...</div>
+<div id="logArea"></div>
+
+<!-- 参加者一覧 -->
+<div id="playerList"></div>
+
+<!-- ゲーム開始（オーナー用） -->
+<div class="game-btn" id="startGameBtnArea" style="display:none">
+  <button id="startGameBtn" onclick="startGame()">ゲーム開始</button>
+</div>
+
+<!-- ===== ポーカーテーブル ===== -->
+<div class="poker-table" id="pokerTable" style="display:none">
+
+  <div class="phase-label" id="phaseDisplay">-</div>
+
+  <!-- コミュニティカード -->
+  <div class="card-row" id="communityRow">
+    <div class="card empty">-</div>
+    <div class="card empty">-</div>
+    <div class="card empty">-</div>
+    <div class="card empty">-</div>
+    <div class="card empty">-</div>
+  </div>
+
+  <div class="pot-display">Pot: <span id="potDisplay">0</span></div>
+
+  <!-- 他プレイヤーの情報 -->
+  <div id="otherPlayersArea"></div>
+
+  <hr style="border-color:#2e7d32; margin:8px 0;">
+
+  <!-- 自分のカード -->
+  <div class="my-area">
+    <div class="my-label" id="myLabel">自分: <span class="chips" id="myChips">60</span></div>
+    <div class="card-row" id="myCards">
+      <div class="card empty">-</div>
+      <div class="card empty">-</div>
+    </div>
+  </div>
+
+  <!-- アクション -->
+  <div class="actions" id="actionArea">
+    <button class="btn-fold"  id="btnFold"  onclick="doAction('fold')" disabled>Fold</button>
+    <button class="btn-check" id="btnCheck" onclick="doAction('check')" disabled>Check</button>
+    <button class="btn-call"  id="btnCall"  onclick="doAction('call')" disabled>Call</button>
+    <button class="btn-raise" id="btnRaise" onclick="showRaise('raise')" disabled>Raise</button>
+  </div>
+
+  <div class="raise-control" id="raiseControl">
+    <input type="range" id="raiseRange" min="10" max="200" value="10" oninput="updateRaiseDisplay()">
+    <span class="raise-val" id="raiseDisplay">10</span>
+    <button class="btn-confirm" onclick="confirmRaise()">決定</button>
+    <button class="btn-cancel" onclick="hideRaise()">戻る</button>
+  </div>
+
+  <div class="hand-result" id="handResult" style="display:none"></div>
+
+  <div class="game-btn" id="nextHandArea" style="display:none">
+    <button id="nextHandBtn" onclick="nextHand()">次のハンド</button>
+  </div>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script src="NetWork.js"></script>
+<script src="poker.js"></script>
+<script>
+// ============================================================
+// ポーカーコントローラー
+// ============================================================
+
+let pokerGame = null;        // オーナーのゲームインスタンス
+let lastState = null;        // 受信した最新状態（全プレイヤー）
+let pendingAction = 'raise'; // 保留中のRaise
+let pokerActive = false;
+let gameStarted = false;     // ゲーム開始フラグ
+
+// UI 参照
+const pokerTable = document.getElementById('pokerTable');
+const startGameBtn = document.getElementById('startGameBtn');
+const phaseDisplay = document.getElementById('phaseDisplay');
+const communityRow = document.getElementById('communityRow');
+const potDisplay = document.getElementById('potDisplay');
+const otherPlayersArea = document.getElementById('otherPlayersArea');
+const myChips = document.getElementById('myChips');
+const myLabel = document.getElementById('myLabel');
+const myCards = document.getElementById('myCards');
+const btnFold = document.getElementById('btnFold');
+const btnCheck = document.getElementById('btnCheck');
+const btnCall = document.getElementById('btnCall');
+const btnRaise = document.getElementById('btnRaise');
+const raiseControl = document.getElementById('raiseControl');
+const raiseRange = document.getElementById('raiseRange');
+const raiseDisplay = document.getElementById('raiseDisplay');
+const handResult = document.getElementById('handResult');
+const nextHandArea = document.getElementById('nextHandArea');
+const nextHandBtn = document.getElementById('nextHandBtn');
+
+// ==================== カード描画 ====================
+function cardEl(card, faceUp) {
+  const d = document.createElement('div'); d.className = 'card';
+  if (faceUp && card) {
+    d.classList.add(card.suit === '♥' || card.suit === '♦' ? 'red' : 'black');
+    d.innerHTML = '<div class="r">' + card.rank + '</div><div class="s">' + card.suit + '</div>';
+  } else if (faceUp) {
+    d.className = 'card empty'; d.textContent = '-';
+  } else {
+    d.className = 'card back'; d.textContent = '?';
+  }
+  return d;
+}
+
+function renderCards(container, cards, faceUp, count) {
+  container.innerHTML = '';
+  const n = count || (cards ? cards.length : 0);
+  for (let i = 0; i < n; i++)
+    container.appendChild(cardEl(cards && i < cards.length ? cards[i] : null, faceUp));
+}
+
+function hc(arr) { return arr ? arr.map(c => Card.fromObj(c)) : []; }
+
+// ==================== ポジションバッジ ====================
+function posBadge(pidx, dealer, sb, bb) {
+  if (pidx === dealer) return '<span class="badge badge-d">D</span>';
+  if (pidx === sb) return '<span class="badge badge-sb">SB</span>';
+  if (pidx === bb) return '<span class="badge badge-bb">BB</span>';
+  return '';
+}
+
+// ==================== オーナー用UI更新 ====================
+function updatePokerUI() {
+  if (!pokerGame) return;
+  const g = pokerGame;
+  const pn = { waiting:'待機中', preflop:'プリフロップ', flop:'フロップ', turn:'ターン', river:'リバー', showdown:'ショーダウン' };
+  phaseDisplay.textContent = pn[g.phase] || g.phase;
+  potDisplay.textContent = g.pot;
+  renderCards(communityRow, g.communityCards, true, 5);
+
+  const me = g.players[0];
+  myChips.textContent = me.chips + (me.debt > 0 ? ' (借金:' + me.debt + ')' : '');
+  renderCards(myCards, me.hole, true, 2);
+
+  // 他プレイヤー
+  renderOtherPlayers(g);
+
+  if (g.handOver) {
+    disableAllActions();
+    showResult(g.winner);
+    nextHandArea.style.display = 'block';
+  } else {
+    nextHandArea.style.display = 'none';
+    handResult.style.display = 'none';
+    if (g.currentPlayer === 0) {
+      enableActions(g.getValidActions(0), g.getMinBet(0), me);
+    } else {
+      disableAllActions();
+    }
+  }
+}
+
+// ==================== 各プレイヤー用UI更新 ====================
+function updatePokerUIFromState(data) {
+  if (!data) return;
+  lastState = data;
+  const pn = { waiting:'待機中', preflop:'プリフロップ', flop:'フロップ', turn:'ターン', river:'リバー', showdown:'ショーダウン' };
+  phaseDisplay.textContent = pn[data.phase] || data.phase;
+  potDisplay.textContent = data.pot;
+  renderCards(communityRow, hc(data.communityCards), true, 5);
+
+  // 自分の情報
+  const me = data.players[data.yourIndex];
+  myChips.textContent = me.chips + (me.debt > 0 ? ' (借金:' + me.debt + ')' : '');
+  if (me.hole) renderCards(myCards, hc(me.hole), true, 2);
+  else renderCards(myCards, null, false, 2);
+
+  // 他プレイヤー
+  renderOtherPlayersFromState(data);
+
+  if (data.handOver) {
+    disableAllActions();
+    showResultFromState(data);
+    nextHandArea.style.display = 'block';
+  } else {
+    nextHandArea.style.display = 'none';
+    handResult.style.display = 'none';
+    if (data.yourTurn) {
+      enableActions(data.validActions, data.minBet, me);
+    } else {
+      disableAllActions();
+    }
+  }
+}
+
+// ==================== 他プレイヤー表示 ====================
+
+function renderOtherPlayers(g) {
+  otherPlayersArea.innerHTML = '';
+  const blinds = g.getBlindPositions();
+  for (let i = 1; i < g.players.length; i++) {
+    const p = g.players[i];
+    const d = document.createElement('div'); d.className = 'other-player';
+    const showCards = (g.phase === 'showdown' || p.folded) ? p.hole : null;
+    let cardsHtml = '';
+    if (p.folded) {
+      cardsHtml = '<span style="color:#888">フォールド</span>';
+    } else if (p.allIn) {
+      cardsHtml = '<span class="badge badge-allin">ALL IN</span>';
+    } else {
+      const c1 = cardEl(showCards && showCards[0] ? showCards[0] : null, showCards && showCards.length > 0);
+      const c2 = cardEl(showCards && showCards[1] ? showCards[1] : null, showCards && showCards.length > 0);
+      cardsHtml = c1.outerHTML + c2.outerHTML;
+    }
+    d.innerHTML = '<span class="pid">' + p.id.slice(0, 10) + '</span> ' + cardsHtml +
+      ' <span class="info">Chip:' + p.chips + ' Bet:' + p.bet + '</span> ' +
+      posBadge(i, blinds.dealer, blinds.sb, blinds.bb) +
+      (p.debt > 0 ? ' <span style="color:#f44336;font-size:0.8em">借金' + p.debt + '</span>' : '');
+    otherPlayersArea.appendChild(d);
+  }
+}
+
+function renderOtherPlayersFromState(data) {
+  otherPlayersArea.innerHTML = '';
+  const meIdx = data.yourIndex;
+  for (let i = 0; i < data.players.length; i++) {
+    if (i === meIdx) continue;
+    const p = data.players[i];
+    const d = document.createElement('div'); d.className = 'other-player';
+    let cardsHtml = '';
+    if (p.folded) {
+      cardsHtml = '<span style="color:#888">フォールド</span>';
+    } else if (p.allIn) {
+      cardsHtml = '<span class="badge badge-allin">ALL IN</span>';
+    } else if (p.hole && data.phase === 'showdown') {
+      const ch = hc(p.hole);
+      cardsHtml = cardEl(ch[0], true).outerHTML + cardEl(ch[1], true).outerHTML;
+    } else {
+      const c1 = cardEl(null, false);
+      const c2 = cardEl(null, false);
+      cardsHtml = c1.outerHTML + c2.outerHTML;
+    }
+    d.innerHTML = '<span class="pid">' + p.id.slice(0, 10) + '</span> ' + cardsHtml +
+      ' <span class="info">Chip:' + p.chips + ' Bet:' + p.bet + '</span>';
+    otherPlayersArea.appendChild(d);
+  }
+}
+
+// ==================== アクション制御 ====================
+
+function disableAllActions() {
+  [btnFold, btnCheck, btnCall, btnRaise].forEach(b => b.disabled = true);
+  raiseControl.style.display = 'none';
+}
+
+function enableActions(actions, minBet, player) {
+  btnFold.disabled = !actions.includes('fold');
+  btnCheck.disabled = !actions.includes('check');
+  btnCall.disabled = !actions.includes('call');
+  btnRaise.disabled = !actions.includes('raise');
+  if (actions.includes('raise')) {
+    const maxBet = player ? (player.chips || 0) + (player.bet || 0) : 200;
+    raiseRange.min = minBet || 10;
+    raiseRange.max = Math.max(raiseRange.min, maxBet);
+    raiseRange.value = String(raiseRange.min);
+    updateRaiseDisplay();
+  }
+}
+
+// ==================== アクション実行 ====================
+
+function doAction(action) {
+  if (!pokerActive || !lastState) return;
+  const isOwner = window.isOwnerFn();
+
+  if (isOwner && pokerGame) {
+    const valid = pokerGame.getValidActions(0);
+    if (!valid.includes(action)) return;
+    let amount = 0;
+    if (action === 'bet' || action === 'raise') amount = parseInt(raiseRange.value);
+    pokerGame.processAction(0, action, amount);
+    afterOwnerAction();
+  } else if (!isOwner) {
+    let amount = 0;
+    if (action === 'bet' || action === 'raise') amount = parseInt(raiseRange.value);
+    sendToHost({ action: 'playerAction', actionType: action, amount: amount });
+    disableAllActions();
+  }
+}
+
+function afterOwnerAction() {
+  if (pokerGame.handOver) {
+    broadcastState();
+    updatePokerUI();
+  } else {
+    broadcastState();
+    requestTurn();
+  }
+}
+
+function requestTurn() {
+  if (!pokerGame || pokerGame.handOver) return;
+  const cp = pokerGame.currentPlayer;
+  if (cp === 0) {
+    updatePokerUI();
+  } else {
+    const p = pokerGame.players[cp];
+    const acts = pokerGame.getValidActions(cp);
+    sendPokerMessageTo(p.id, {
+      action: 'requestAction',
+      validActions: acts,
+      minBet: pokerGame.getMinBet(cp),
+      currentBet: pokerGame.currentBet,
+      yourBet: p.bet,
+      yourChips: p.chips
+    });
+    disableAllActions();
+    updatePokerUI();
+  }
+}
+
+function showRaise(action) {
+  pendingAction = action;
+  raiseControl.style.display = 'block';
+}
+function hideRaise() { raiseControl.style.display = 'none'; }
+function updateRaiseDisplay() { raiseDisplay.textContent = raiseRange.value; }
+function confirmRaise() { raiseControl.style.display = 'none'; doAction(pendingAction); }
+
+// ==================== 結果表示 ====================
+
+function showResult(winner) {
+  if (!winner) return;
+  handResult.style.display = 'block';
+  const isWin = winner.winnerIdx === 0;
+  let html = '';
+  if (winner.winnerIdx === -1) {
+    html += '<div class="draw">引き分け</div><div class="detail">' + winner.handName + '</div><div class="detail">Pot: ' + winner.pot + '</div>';
+  } else if (isWin) {
+    html += '<div class="win">あなたの勝ち！</div><div class="detail">役: ' + winner.handName + '</div><div class="detail">獲得: ' + winner.pot + '</div>';
+  } else {
+    html += '<div class="lose">' + winner.winner.slice(0, 10) + ' の勝ち</div><div class="detail">役: ' + winner.handName + '</div><div class="detail">獲得: ' + winner.pot + '</div>';
+  }
+  handResult.innerHTML = html;
+}
+
+function showResultFromState(data) {
+  if (!data.winner) return;
+  handResult.style.display = 'block';
+  const isMe = data.winner.winnerIdx === data.yourIndex;
+  let html = '';
+  if (data.winner.winnerIdx === -1) {
+    html += '<div class="draw">引き分け</div><div class="detail">' + data.winner.handName + '</div><div class="detail">Pot: ' + data.winner.pot + '</div>';
+  } else if (isMe) {
+    html += '<div class="win">あなたの勝ち！</div><div class="detail">役: ' + data.winner.handName + '</div><div class="detail">獲得: ' + data.winner.pot + '</div>';
+  } else {
+    html += '<div class="lose">' + data.winner.winner.slice(0, 10) + ' の勝ち</div><div class="detail">役: ' + data.winner.handName + '</div><div class="detail">獲得: ' + data.winner.pot + '</div>';
+  }
+  handResult.innerHTML = html;
+}
+
+// ==================== ゲーム制御 ====================
+
+function startGame() {
+  if (!window.isOwnerFn() || !pokerGame) return;
+  gameStarted = true;
+  pokerTable.style.display = 'block';
+  startGameBtnArea.style.display = 'none';
+  broadcastToPlayers({ action: 'gameStart' });
+  pokerGame.startHand();
+  broadcastState();
+  requestTurn();
+  addLog('ゲーム開始！ ハンド#' + pokerGame.handNum);
+}
+
+function nextHand() {
+  const isOwner = window.isOwnerFn();
+  if (isOwner && pokerGame) {
+    handResult.style.display = 'none';
+    nextHandArea.style.display = 'none';
+    pokerGame.startHand();
+    broadcastState();
+    requestTurn();
+    addLog('ハンド#' + pokerGame.handNum);
+  } else {
+    sendToHost({ action: 'requestNextHand' });
+    handResult.style.display = 'none';
+    nextHandArea.style.display = 'none';
+  }
+}
+
+function broadcastState() {
+  if (!pokerGame) return;
+  for (let i = 0; i < pokerGame.players.length; i++) {
+    const st = pokerGame.getStateForPlayer(i);
+    if (i === 0) {
+      lastState = st;
+      updatePokerUI();
+    } else {
+      sendPokerMessageTo(pokerGame.players[i].id, { action: 'stateUpdate', data: st });
+    }
+  }
+}
+
+// ==================== メッセージ受信 ====================
+
+setOnPokerMessage((msg, senderId) => {
+  const isOwner = window.isOwnerFn();
+
+  if (msg.action === 'roomState') {
+    // 参加者一覧を更新（非オーナー用）
+    if (!isOwner && msg.players) {
+      const el = document.getElementById('playerList');
+      el.innerHTML = '';
+      for (const p of msg.players) {
+        const d = document.createElement('div'); d.className = 'player-item';
+        const isMe = p.id === getMyId();
+        d.innerHTML = (isMe ? '★ 自分' : '● ' + p.id) +
+          ' <span class="chips">' + p.chips + '</span>' +
+          (p.debt > 0 ? ' <span class="debt">借金:' + p.debt + '</span>' : '');
+        el.appendChild(d);
+      }
+    }
+    return;
+  }
+
+  if (msg.action === 'gameStart') {
+    pokerActive = true;
+    gameStarted = true;
+    pokerTable.style.display = 'block';
+    startGameBtnArea.style.display = 'none';
+    addLog('ゲームが開始されました');
+    return;
+  }
+
+  if (msg.action === 'stateUpdate') {
+    if (!isOwner) {
+      updatePokerUIFromState(msg.data);
+    }
+    return;
+  }
+
+  if (msg.action === 'requestAction') {
+    if (!isOwner) {
+      // 自分の番
+      lastState = lastState || {};
+      lastState.validActions = msg.validActions;
+      lastState.minBet = msg.minBet;
+      lastState.yourTurn = true;
+      // プレイヤー情報更新
+      if (lastState.players) {
+        const me = lastState.players[lastState.yourIndex];
+        if (me) { me.chips = msg.yourChips; me.bet = msg.yourBet; }
+      }
+      const me2 = lastState ? lastState.players[lastState.yourIndex] : null;
+      enableActions(msg.validActions, msg.minBet, me2);
+      addLog('あなたの番です');
+    }
+    return;
+  }
+
+  if (msg.action === 'playerAction') {
+    if (isOwner && pokerGame) {
+      const pidx = pokerGame.players.findIndex(p => p.id === senderId);
+      if (pidx >= 0 && pidx === pokerGame.currentPlayer) {
+        pokerGame.processAction(pidx, msg.actionType, msg.amount || 0);
+        afterOwnerAction();
+      }
+    }
+    return;
+  }
+
+  if (msg.action === 'requestNextHand') {
+    if (isOwner && pokerGame && pokerGame.handOver) {
+      nextHand();
+    }
+    return;
+  }
+});
+
+// ==================== 初期化（オーナーのPokerGame作成） ====================
+
+// createRoomBtn が押された後、startGameBtn が有効になる
+// startGameBtn が押されたときに PokerGame を作成する
+
+// startGame ボタンのクリック時にはまだ PokerGame がないので、先に作る
+const origStartGame = startGame;
+window.startGame = function() {
+  const isOwner = window.isOwnerFn();
+  if (!isOwner) return;
+  const data = window.getPlayerData();
+  if (data.length < 2) { addLog('参加者が2人以上必要です'); return; }
+  // ゲーム開始後は新規参加を禁止
+  if (window.setAllowJoins) window.setAllowJoins(false);
+  const ids = data.map(d => d.id);
+  pokerGame = new PokerGame(ids);
+  pokerActive = true;
+  origStartGame();
+};
+window.nextHand = nextHand;
+window.doAction = doAction;
+window.showRaise = showRaise;
+window.hideRaise = hideRaise;
+window.updateRaiseDisplay = updateRaiseDisplay;
+window.confirmRaise = confirmRaise;
+</script>
+
+</body>
+</html>
