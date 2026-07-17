@@ -145,6 +145,7 @@ h1 { margin: 0 0 4px 0; font-size: 1.3em; color: #e94560; display: inline-block;
   background: linear-gradient(135deg, #0a0a1a 0%, #1a1a3e 50%, #0a0a1a 100%);
   z-index: 100; display: flex; align-items: center; justify-content: center;
   transition: opacity 0.6s ease, transform 0.6s ease;
+  pointer-events: none;
 }
 #standbyOverlay.hidden { opacity: 0; transform: scale(1.1); pointer-events: none; }
 .standby-inner {
@@ -152,9 +153,28 @@ h1 { margin: 0 0 4px 0; font-size: 1.3em; color: #e94560; display: inline-block;
   background: rgba(22,33,62,0.85); border-radius: 24px;
   border: 1px solid rgba(233,69,96,0.2); box-shadow: 0 0 60px rgba(233,69,96,0.08);
   animation: fadeInDown 0.5s ease;
+  pointer-events: auto;
 }
 .standby-inner .logo { font-size: 2.2em; color: #e94560; margin-bottom: 16px; font-weight: bold; letter-spacing: 2px; }
 .standby-inner .logo-sub { color: #4fc3f7; font-size: 0.9em; margin-bottom: 20px; opacity: 0.7; }
+
+/* 名前入力 */
+.standby-name-row { margin: 12px 0 8px 0; }
+.standby-name-row input {
+  padding: 8px 14px; border: 1px solid rgba(255,255,255,0.15); border-radius: 8px;
+  background: rgba(255,255,255,0.06); color: #fff; font-size: 1em; text-align: center;
+  width: 200px; outline: none; transition: border-color 0.2s;
+}
+.standby-name-row input:focus { border-color: #e94560; }
+.standby-name-row input::placeholder { color: rgba(255,255,255,0.3); }
+
+/* 接続 */
+.standby-conn-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; justify-content: center; }
+.standby-conn-row input { flex: 1; min-width: 120px; max-width: 200px; padding: 7px 10px; border: 1px solid rgba(255,255,255,0.15); border-radius: 4px; background: rgba(255,255,255,0.06); color: #eee; text-align: center; }
+.standby-conn-row input:focus { border-color: #e94560; }
+.standby-conn-row input::placeholder { color: rgba(255,255,255,0.3); }
+.standby-conn-row button { padding: 7px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+.conn-sep { color: rgba(255,255,255,0.15); align-self: center; }
 
 /* 待機中カードアニメーション */
 .waiting-cards {
@@ -313,13 +333,32 @@ h1 { margin: 0 0 4px 0; font-size: 1.3em; color: #e94560; display: inline-block;
       <div class="waiting-card">♥</div>
       <div class="waiting-card">♦</div>
     </div>
+
+    <!-- 名前入力 -->
+    <div class="standby-name-row">
+      <input type="text" id="nameInput" placeholder="名前を入力" maxlength="10">
+    </div>
+
+    <!-- 接続 -->
+    <div class="standby-conn-row">
+      <button class="btn-primary" id="createRoomBtn">ルーム作成</button>
+      <span class="conn-sep">|</span>
+      <input type="text" id="joinInput" placeholder="入室するルームID">
+      <button class="btn-secondary" id="joinBtn">入室</button>
+    </div>
+
     <div class="standby-status" id="standbyStatus">
       <span class="pulse-dot waiting"></span><span id="standbyStatusText">準備中...</span>
     </div>
     <div class="standby-roomid">ルームID: <span id="standbyRoomId">---</span></div>
-    <div class="standby-players" id="standbyPlayers">
+    <div class="standby-players" id="standbyPlayers" style="display:none">
       <div class="title">参加者</div>
       <div class="list" id="standbyPlayerList"></div>
+    </div>
+
+    <!-- ゲーム開始（オーナー用） -->
+    <div class="game-btn" id="startGameBtnArea" style="display:none">
+      <button id="startGameBtn" onclick="startGame()">ゲーム開始</button>
     </div>
   </div>
 </div>
@@ -331,23 +370,11 @@ h1 { margin: 0 0 4px 0; font-size: 1.3em; color: #e94560; display: inline-block;
 
 <div class="roomid">ルームID: <span id="roomId">---</span></div>
 
-<div class="conn-row">
-  <button class="btn-primary" id="createRoomBtn">ルーム作成</button>
-  <span style="color:#555">|</span>
-  <input type="text" id="joinInput" placeholder="入室するルームID">
-  <button class="btn-secondary" id="joinBtn">入室</button>
-</div>
-
-<div id="status">準備中...</div>
+<div id="status" style="display:none"></div>
 <div id="logArea"></div>
 
 <!-- 参加者一覧 -->
-<div id="playerList"></div>
-
-<!-- ゲーム開始（オーナー用） -->
-<div class="game-btn" id="startGameBtnArea" style="display:none">
-  <button id="startGameBtn" onclick="startGame()">ゲーム開始</button>
-</div>
+<div id="playerList" style="display:none"></div>
 
 <!-- ===== ポーカーテーブル ===== -->
 <div class="poker-table" id="pokerTable" style="display:none">
@@ -594,7 +621,8 @@ function renderOtherPlayers(g) {
     if (g.currentPlayer === i && !g.handOver) {
       extra = '<span class="turn-indicator">TURN</span>';
     }
-    d.innerHTML = '<span class="pid">' + p.id.slice(0, 10) + '</span> ' + cardsHtml +
+    const pname = (window.getPlayerName ? window.getPlayerName(p.id) : p.id);
+    d.innerHTML = '<span class="pid">' + pname.slice(0, 10) + '</span> ' + cardsHtml +
       ' <span class="info">Chip:' + p.chips + ' Bet:' + p.bet + '</span> ' +
       posBadge(i, blinds.dealer, blinds.sb, blinds.bb) + extra +
       (p.debt > 0 ? ' <span style="color:#f44336;font-size:0.8em">借金' + p.debt + '</span>' : '');
@@ -627,7 +655,8 @@ function renderOtherPlayersFromState(data) {
     if (data.currentPlayer === i && !data.handOver) {
       extra = '<span class="turn-indicator">TURN</span>';
     }
-    d.innerHTML = '<span class="pid">' + p.id.slice(0, 10) + '</span> ' + cardsHtml +
+    const pname = (window.getPlayerName ? window.getPlayerName(p.id) : p.id);
+    d.innerHTML = '<span class="pid">' + pname.slice(0, 10) + '</span> ' + cardsHtml +
       ' <span class="info">Chip:' + p.chips + ' Bet:' + p.bet + '</span>' +
       (data.blinds ? posBadge(i, data.blinds.dealer, data.blinds.sb, data.blinds.bb) : '') + extra;
     otherPlayersArea.appendChild(d);
@@ -743,7 +772,8 @@ function showResult(winner) {
     html += '<div class="win">🎉 あなたの勝ち！</div><div class="detail">役: ' + winner.handName + '</div><div class="detail">獲得: ' + winner.pot + '</div>';
   } else {
     handResult.classList.add('lose-result');
-    html += '<div class="lose">' + winner.winner.slice(0, 10) + ' の勝ち</div><div class="detail">役: ' + winner.handName + '</div><div class="detail">獲得: ' + winner.pot + '</div>';
+    const wname = window.getPlayerName ? window.getPlayerName(winner.winner) : winner.winner.slice(0, 10);
+    html += '<div class="lose">' + wname + ' の勝ち</div><div class="detail">役: ' + winner.handName + '</div><div class="detail">獲得: ' + winner.pot + '</div>';
   }
   handResult.innerHTML = html;
   addLog('結果: ' + (winner.winnerIdx === -1 ? '引き分け' : isWin ? '勝利！' : '敗北') + ' (' + winner.handName + ')', 'result');
@@ -763,7 +793,8 @@ function showResultFromState(data) {
     html += '<div class="win">🎉 あなたの勝ち！</div><div class="detail">役: ' + data.winner.handName + '</div><div class="detail">獲得: ' + data.winner.pot + '</div>';
   } else {
     handResult.classList.add('lose-result');
-    html += '<div class="lose">' + data.winner.winner.slice(0, 10) + ' の勝ち</div><div class="detail">役: ' + data.winner.handName + '</div><div class="detail">獲得: ' + data.winner.pot + '</div>';
+    const wname = window.getPlayerName ? window.getPlayerName(data.winner.winner) : data.winner.winner.slice(0, 10);
+    html += '<div class="lose">' + wname + ' の勝ち</div><div class="detail">役: ' + data.winner.handName + '</div><div class="detail">獲得: ' + data.winner.pot + '</div>';
   }
   handResult.innerHTML = html;
 }
@@ -830,9 +861,11 @@ setOnPokerMessage((msg, senderId) => {
       const sl = document.getElementById('standbyPlayerList');
       if (sl) sl.innerHTML = '';
       for (const p of msg.players) {
+        const pname = p.name || p.id;
+        if (window.registerPlayerName) window.registerPlayerName(p.id, pname);
         const d = document.createElement('div'); d.className = 'player-item';
         const isMe = p.id === getMyId();
-        d.innerHTML = (isMe ? '★ 自分' : '● ' + p.id) +
+        d.innerHTML = (isMe ? '★ 自分' : '● ' + pname) +
           ' <span class="chips">' + p.chips + '</span>' +
           (p.debt > 0 ? ' <span class="debt">借金:' + p.debt + '</span>' : '');
         el.appendChild(d);
@@ -840,13 +873,16 @@ setOnPokerMessage((msg, senderId) => {
         if (sl) {
           const sd = document.createElement('div'); sd.className = 'standby-player';
           if (isMe) sd.classList.add('me');
-          const initial = p.id.charAt(0);
+          const initial = pname.charAt(0);
           sd.innerHTML = '<div class="avatar">' + initial + '</div>' +
-            '<div class="name">' + (isMe ? '自分' : p.id) + '</div>' +
+            '<div class="name">' + (isMe ? '自分' : pname) + '</div>' +
             '<div class="chips">$' + p.chips + '</div>';
           sl.appendChild(sd);
         }
       }
+      // スタンバイ参加者リストを表示
+      const sp = document.getElementById('standbyPlayers');
+      if (sp) sp.style.display = '';
     }
     return;
   }
@@ -921,6 +957,10 @@ window.startGame = function() {
   if (data.length < 2) { addLog('参加者が2人以上必要です', 'info'); return; }
   // ゲーム開始後は新規参加を禁止
   if (window.setAllowJoins) window.setAllowJoins(false);
+  // 名前を登録
+  for (const d of data) {
+    if (window.registerPlayerName) window.registerPlayerName(d.id, d.name || d.id);
+  }
   const ids = data.map(d => d.id);
   pokerGame = new PokerGame(ids);
   pokerActive = true;

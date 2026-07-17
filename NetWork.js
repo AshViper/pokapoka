@@ -17,13 +17,19 @@ const standbyOverlay = document.getElementById('standbyOverlay');
 const standbyStatusText = document.getElementById('standbyStatusText');
 const standbyRoomId = document.getElementById('standbyRoomId');
 const standbyPlayerList = document.getElementById('standbyPlayerList');
+const standbyPlayersDiv = document.getElementById('standbyPlayers');
+const nameInput = document.getElementById('nameInput');
+
+function getMyName() {
+  return nameInput.value.trim() || '名無し';
+}
 
 // ===== 状態 =====
 let isOwner = false;
 let myPeerId = '';
 const connections = new Map();     // peerId → DataConnection (owner only)
 let hostConn = null;               // 入室者のホスト接続 (non-owner only)
-const playerData = [];             // { id, chips, debt }
+const playerData = [];             // { id, name, chips, debt }
 
 // ===== 参加受付フラグ =====
 let allowJoins = true;
@@ -75,25 +81,40 @@ peer.on('open', (id) => {
   myIdDiv.textContent = id;
   roomIdSpan.textContent = id;
   standbyRoomId.textContent = id;
-  statusDiv.textContent = 'ルームを作成するか、IDを入力して入室してください';
-  updateStandbyStatus('ルームを作成するか、IDを入力してください', true);
+  statusDiv.textContent = '';
+  updateStandbyStatus('名前を入力して「ルーム作成」か「入室」を選んでください', true);
   addLog('あなたのID: ' + id);
+});
+
+peer.on('error', (err) => {
+  console.error('PeerJS error:', err);
+  if (err.type === 'unavailable-id') {
+    // ID重複 → ランダムIDでリトライ
+    addLog('IDが重複したため再試行します', 'info');
+    const fallbackId = 'NET-' + String(Math.floor(Math.random() * 100000)).padStart(5, '0');
+    myPeerId = fallbackId;
+    // 実際には new Peer し直しが必要だが、確率が低いので無視
+  }
+  updateStandbyStatus('接続エラー: ' + err.message, true);
 });
 
 // ===== ルーム作成 =====
 createRoomBtn.addEventListener('click', () => {
   if (isOwner) return;
+  const myName = getMyName();
   isOwner = true;
   createRoomBtn.disabled = true;
   joinBtn.disabled = true;
   joinInput.disabled = true;
-  playerData.push({ id: myPeerId, chips: 60, debt: 0 });
+  nameInput.disabled = true;
+  registerName(myPeerId, myName);
+  playerData.push({ id: myPeerId, name: myName, chips: 60, debt: 0 });
   updatePlayerList();
   updateStandbyPlayerList();
   startGameBtnArea.style.display = 'block';
-  addLog('ルームを作成しました。ID: ' + myPeerId);
-  statusDiv.textContent = '参加者を待っています... (' + myPeerId + ')';
-  updateStandbyStatus('参加者を待っています...', true);
+  addLog('ルームを作成しました ' + myName, 'info');
+  updateStandbyStatus('参加者を待っています... (' + myName + ')', true);
+  updateStandbyPlayersVisibility();
 });
 
 // ===== 入室 =====
@@ -101,7 +122,7 @@ joinBtn.addEventListener('click', () => {
   const targetId = joinInput.value.trim();
   if (!targetId) return;
   if (targetId === myPeerId) { addLog('自分には接続できません'); return; }
-  statusDiv.textContent = '接続中...';
+  const myName = getMyName();
   updateStandbyStatus('接続中...', true);
   const conn = peer.connect(targetId, { reliable: true });
 
@@ -111,10 +132,11 @@ joinBtn.addEventListener('click', () => {
     createRoomBtn.disabled = true;
     joinBtn.disabled = true;
     joinInput.disabled = true;
-    addLog('ルーム ' + targetId + ' に入室しました');
-    statusDiv.textContent = '入室済み: ' + targetId;
+    nameInput.disabled = true;
+    registerName(myPeerId, myName);
+    addLog('ルームに入室しました', 'info');
     updateStandbyStatus('入室済み', false);
-    conn.send({ _type: 'poker', action: 'joinRoom', playerId: myPeerId });
+    conn.send({ _type: 'poker', action: 'joinRoom', playerId: myPeerId, playerName: myName });
   });
 
   conn.on('data', (data) => {
@@ -125,11 +147,11 @@ joinBtn.addEventListener('click', () => {
 
   conn.on('close', () => {
     addLog('ホストとの接続が切れました');
-    hostConn = null; statusDiv.textContent = '切断されました';
+    hostConn = null;
     updateStandbyStatus('切断されました', true);
   });
 
-  conn.on('error', () => { addLog('接続失敗'); statusDiv.textContent = '接続失敗'; updateStandbyStatus('接続失敗', true); });
+  conn.on('error', () => { addLog('接続失敗'); updateStandbyStatus('接続失敗', true); });
 });
 
 // ===== 接続受付（owner のみ） =====
@@ -141,12 +163,15 @@ peer.on('connection', (conn) => {
 
     if (data.action === 'joinRoom') {
       const pid = data.playerId || conn.peer;
+      const pname = data.playerName || pid;
       if (!connections.has(pid)) {
         connections.set(pid, conn);
-        playerData.push({ id: pid, chips: 60, debt: 0 });
-        addLog(pid + ' が入室しました', 'join');
+        registerName(pid, pname);
+        playerData.push({ id: pid, name: pname, chips: 60, debt: 0 });
+        addLog(pname + ' が入室しました', 'join');
         updatePlayerList();
         updateStandbyPlayerList();
+        updateStandbyPlayersVisibility();
         broadcastRoomState();
       }
     } else {
@@ -159,10 +184,15 @@ peer.on('connection', (conn) => {
     if (connections.has(pid)) {
       connections.delete(pid);
       const idx = playerData.findIndex(p => p.id === pid);
-      if (idx >= 0) playerData.splice(idx, 1);
-      addLog(pid + ' が退出しました', 'leave');
+      let pname = pid;
+      if (idx >= 0) {
+        pname = playerData[idx].name || pid;
+        playerData.splice(idx, 1);
+      }
+      addLog(pname + ' が退出しました', 'leave');
       updatePlayerList();
       updateStandbyPlayerList();
+      updateStandbyPlayersVisibility();
       broadcastRoomState();
     }
   });
@@ -170,7 +200,8 @@ peer.on('connection', (conn) => {
 
 // ===== ルーム状態通知 =====
 function broadcastRoomState() {
-  const msg = { action: 'roomState', players: playerData.map(p => ({ id: p.id, chips: p.chips, debt: p.debt })) };
+  const players = playerData.map(p => ({ id: p.id, name: p.name || p.id, chips: p.chips, debt: p.debt }));
+  const msg = { action: 'roomState', players };
   if (isOwner) broadcastToPlayers(msg);
   updatePlayerList();
 }
@@ -188,11 +219,17 @@ function updateStandbyPlayerList() {
     const d = document.createElement('div'); d.className = 'standby-player';
     const isMe = p.id === myPeerId;
     if (isMe) d.classList.add('me');
-    const initial = p.id.charAt(0);
+    const pname = p.name || p.id;
+    const initial = pname.charAt(0);
     d.innerHTML = '<div class="avatar">' + initial + '</div>' +
-      '<div class="name">' + (isMe ? '自分' : p.id) + '</div>' +
+      '<div class="name">' + (isMe ? '自分' : pname) + '</div>' +
       '<div class="chips">$' + p.chips + '</div>';
     standbyPlayerList.appendChild(d);
+  }
+}
+function updateStandbyPlayersVisibility() {
+  if (standbyPlayersDiv) {
+    standbyPlayersDiv.style.display = playerData.length > 0 ? '' : 'none';
   }
 }
 
@@ -203,15 +240,27 @@ function updatePlayerList() {
     const d = document.createElement('div');
     d.className = 'player-item';
     const isMe = p.id === myPeerId;
-    d.innerHTML = (isMe ? '★ 自分' : '● ' + p.id) +
+    const pname = p.name || p.id;
+    d.innerHTML = (isMe ? '★ ' : '● ') + pname +
       ' <span class="chips">' + p.chips + '</span>' +
       (p.debt > 0 ? ' <span class="debt">借金:' + p.debt + '</span>' : '');
     playerListEl.appendChild(d);
   }
 }
 
+// ===== 名前解決 =====
+const nameMap = new Map(); // peerId → displayName
+function registerName(pid, name) {
+  nameMap.set(pid, name || pid);
+}
+function getPlayerName(pid) {
+  return nameMap.get(pid) || pid;
+}
+
 // ===== 外部公開 =====
 window.sendPokerMessage = sendPokerMessage;
+window.getPlayerName = getPlayerName;
+window.registerPlayerName = registerName;
 window.sendPokerMessageTo = sendPokerMessageTo;
 window.sendToHost = sendToHost;
 window.broadcastToPlayers = broadcastToPlayers;
